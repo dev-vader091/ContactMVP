@@ -19,6 +19,7 @@ builder.Services.AddDefaultIdentity<AppUser>(options => options.SignIn.RequireCo
 builder.Services.AddControllersWithViews();
 
 // Custom Services 
+// must use AddScoped to add interfaces 
 builder.Services.AddScoped<IImageService, ImageService>();
 
 
