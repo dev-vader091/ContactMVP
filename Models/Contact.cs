@@ -6,8 +6,10 @@ namespace ContactMVP.Models
 {
     public class Contact
     {
+        // Primary Key 
         public int Id { get; set; }
 
+        // Foreign Key
         [Required]
         public string? AppUserId { get; set; }
 

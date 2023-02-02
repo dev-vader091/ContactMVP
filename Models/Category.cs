@@ -10,7 +10,7 @@ namespace ContactMVP.Models
         [Display(Name = "Category Name")]
         public string? Name { get; set; }
 
-        
+        // Foreign Key 
         [Required]
         public string? AppUserId { get; set; }
 

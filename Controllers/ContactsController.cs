@@ -66,9 +66,19 @@ namespace ContactMVP.Controllers
 
         // GET: Contacts/Create
       
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            //ViewData["AppUserId"] = new SelectList(_context.Users, "Id", "Id");
+            // Query and present the list of categories for logged in user
+            string? userId = _userManager.GetUserId(User);
+
+            IEnumerable<Category> categoriesList = await _context.Categories
+                                                         .Where(c => c.AppUserId == userId)
+                                                         .ToListAsync();
+
+
+            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id", "Name");
+
+
 
             ViewData["StatesList"] = new SelectList(Enum.GetValues(typeof(States)).Cast<States>());
             return View();
@@ -80,7 +90,7 @@ namespace ContactMVP.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         
-        public async Task<IActionResult> Create([Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,Phone,Created,ImageFile")] Contact contact)
+        public async Task<IActionResult> Create([Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,Phone,Created,ImageFile")] Contact contact, IEnumerable<int> selected)
         {
 
             ModelState.Remove("AppUserId");

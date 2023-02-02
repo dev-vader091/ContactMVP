@@ -7,23 +7,36 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContactMVP.Data;
 using ContactMVP.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ContactMVP.Controllers
 {
+    [Authorize]
     public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<AppUser> _userManager;
 
-        public CategoriesController(ApplicationDbContext context)
+
+        public CategoriesController(ApplicationDbContext context, UserManager<AppUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: Categories
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Categories.Include(c => c.AppUser);
-            return View(await applicationDbContext.ToListAsync());
+            string userId = _userManager.GetUserId(User)!;
+
+            //var model = _context.Categories.Include(c => c.AppUser);
+
+            List<Category> categories = new List<Category>();
+
+            categories = await _context.Categories.Where(c => c.AppUserId == userId).Include(c => c.AppUser).ToListAsync();
+
+            return View(categories);
         }
 
         // GET: Categories/Details/5
@@ -59,13 +72,18 @@ namespace ContactMVP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name,AppUserId")] Category category)
         {
+            ModelState.Remove("AppUserId");
+
             if (ModelState.IsValid)
             {
+                category.AppUserId = _userManager.GetUserId(User);
+
+
                 _context.Add(category);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["AppUserId"] = new SelectList(_context.Users, "Id", "Id", category.AppUserId);
+
             return View(category);
         }
 
