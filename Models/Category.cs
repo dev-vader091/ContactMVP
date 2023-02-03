@@ -4,6 +4,7 @@ namespace ContactMVP.Models
 {
     public class Category
     {
+        // Primary Key
         public int Id { get; set; }
 
         [Required]
