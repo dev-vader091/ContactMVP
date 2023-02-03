@@ -20,19 +20,24 @@ namespace ContactMVP.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly IImageService _imageService;
+        private readonly IContactMVPService _contactMVPService;
 
 
         public ContactsController(ApplicationDbContext context,
                                   UserManager<AppUser> userManager, 
-                                  IImageService imageService)
+                                  IImageService imageService,
+                                  IContactMVPService contactMVPService)
         {
             _context = context;
             _userManager = userManager;
             _imageService = imageService;
+            _contactMVPService = contactMVPService;
         }
+                                 
+
 
         // GET: Contacts
-        
+
         public async Task<IActionResult> Index()
         {
             string userId = _userManager.GetUserId(User)!;
@@ -94,6 +99,9 @@ namespace ContactMVP.Controllers
         
         public async Task<IActionResult> Create([Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,Phone,Created,ImageFile")] Contact contact, IEnumerable<int> selected)
         {
+            // ModelState -- built in class to check for required/non-nullable
+            // reflects what is expected from db
+            // ModelState will be invalid if check fails
 
             ModelState.Remove("AppUserId");
 
@@ -117,17 +125,8 @@ namespace ContactMVP.Controllers
                 _context.Add(contact);
                 await _context.SaveChangesAsync();
 
-                // Loop over selected categories to find the category entities in the db
-                foreach (int categoryId in selected)
-                {
-                    Category? category = await _context.Categories.FindAsync(categoryId);
-               
-                    category!.Contacts.Add(contact);
-
-
-                }
-                    // Save the changes to db
-                    await _context.SaveChangesAsync();
+                // TODO: Add service to call
+                await _contactMVPService.AddContactToCategoriesAsync(selected, contact.Id);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -140,6 +139,15 @@ namespace ContactMVP.Controllers
         
         public async Task<IActionResult> Edit(int? id)
         {
+            if (id == null || _context.Contacts == null)
+            {
+                return NotFound();
+            }
+
+            var contact = await _context.Contacts
+                                        .Include(c => c.Categories)
+                                        .FirstOrDefaultAsync(c => c.Id == id);
+
             // Query and present the list of categories for logged in user
             string? userId = _userManager.GetUserId(User);
 
@@ -147,23 +155,19 @@ namespace ContactMVP.Controllers
                                                          .Where(c => c.AppUserId == userId)
                                                          .ToListAsync();
 
+            IEnumerable<int> currentCategories = contact!.Categories.Select(c => c.Id);
 
 
-            if (id == null || _context.Contacts == null)
-            {
-                return NotFound();
-            }
-
-            var contact = await _context.Contacts.FindAsync(id);
             if (contact == null)
             {
                 return NotFound();
             }
 
 
-
-            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id", "Name");
+            // MultiSelectList -- "Id" is what's chosen(category in this case), "Name" is what is sent/shown to client(view)
+            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id", "Name", currentCategories);
             ViewData["StatesList"] = new SelectList(Enum.GetValues(typeof(States)).Cast<States>());
+            
             return View(contact);
         }
 
@@ -206,19 +210,17 @@ namespace ContactMVP.Controllers
 
                     //TODO: 
                     // Add use of the ContactMVPService ???
-                    //
+                    //DONE!
 
-                    // Loop over selected categories to find the category entities in the db
-                    //foreach (int categoryId in selected)
-                    //{
-                    //    Category? category = await _context.Categories.FindAsync(categoryId);
+                    if (selected != null)
+                    {
+                        // 1. Remove Contact's categories
+                        await _contactMVPService.RemoveAllContactCategoriesAsync(contact.Id);
 
-                    //    category!.Contacts.Add(contact);
+                        // 2. Add selected categories to contact
+                        await _contactMVPService.AddContactToCategoriesAsync(selected, contact.Id);
+                    }
 
-
-                    //}
-                    //// Save the changes to db
-                    //await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {

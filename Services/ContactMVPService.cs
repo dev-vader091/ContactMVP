@@ -1,13 +1,47 @@
-﻿using ContactMVP.Models;
+﻿using ContactMVP.Data;
+using ContactMVP.Models;
 using ContactMVP.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace ContactMVP.Services
 {
     public class ContactMVPService : IContactMVPService
     {
-        public Task AddContactToCategoriesAsync(IEnumerable<int> category, int contactId)
+        private readonly ApplicationDbContext _context;
+
+        public ContactMVPService(ApplicationDbContext context)
         {
-            throw new NotImplementedException();
+            _context = context;
+        }
+
+        public async Task AddContactToCategoriesAsync(IEnumerable<int> categoryIds, int contactId)
+        {
+            try
+            {
+                // Get contact from database
+                Contact? contact = await _context.Contacts
+                                                  .Include(c => c.Categories)
+                                                  .FirstOrDefaultAsync(c => c.Id == contactId);
+                
+                foreach (int categoryId in categoryIds) 
+                {
+                    // Get the category
+                    Category? category = await _context.Categories.FindAsync(categoryId);
+
+                    if (contact != null && category != null)
+                    {
+                        contact.Categories.Add(category);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+            
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         public Task AddContactToCategoryAsync(int categoryId, int contactId)
@@ -20,14 +54,51 @@ namespace ContactMVP.Services
             throw new NotImplementedException();
         }
 
-        public Task<bool> IsContactInCategory(int categoryId, int contactId)
+        public async Task<bool> IsContactInCategory(int categoryId, int contactId)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // Get contact from database
+                Contact? contact = await _context.Contacts
+                                                 .Include(c => c.Categories)
+                                                 .FirstOrDefaultAsync(c => c.Id == contactId);
+
+                bool isInCategory = contact!.Categories.Select(c => c.Id).Contains(categoryId);
+
+                return isInCategory;
+                
+            }
+
+
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
-        public Task RemoveAllContactCategoriesAsync(int contactId)
+        public async Task RemoveAllContactCategoriesAsync(int contactId)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // Get contact from database
+                Contact? contact = await _context.Contacts
+                                                  .Include(c => c.Categories)
+                                                  .FirstOrDefaultAsync(c => c.Id == contactId);
+             
+                // interaction w/list of categories
+                contact!.Categories.Clear();
+                // clear the DBset
+                _context.Update(contact);
+                //update the database
+                await _context.SaveChangesAsync();
+                                                  
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
     }
 }

@@ -20,9 +20,12 @@ builder.Services.AddDefaultIdentity<AppUser>(options => options.SignIn.RequireCo
 builder.Services.AddControllersWithViews();
 
 // Custom Services 
-// must use AddScoped to add interfaces 
+// must use AddScoped to add interfaces
+// When we say "builder.Services.AddScoped<IInterface, Class>();
+// " we're saying "when someone asks for IInterface, provide them this Class"
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IEmailSender, EmailService>();
+builder.Services.AddScoped<IContactMVPService, ContactMVPService>();
 
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 

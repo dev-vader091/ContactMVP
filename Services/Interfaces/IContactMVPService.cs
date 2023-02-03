@@ -5,7 +5,7 @@ namespace ContactMVP.Services.Interfaces
     public interface IContactMVPService
     {
         public Task AddContactToCategoryAsync(int categoryId, int contactId);
-        public Task AddContactToCategoriesAsync(IEnumerable<int> category, int contactId);
+        public Task AddContactToCategoriesAsync(IEnumerable<int> categoryId, int contactId);
 
         public Task<IEnumerable<Category>> GetAppUserCategoriesAsync(string appUserId);
     
