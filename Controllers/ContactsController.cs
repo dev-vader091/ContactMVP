@@ -39,7 +39,9 @@ namespace ContactMVP.Controllers
 
             List<Contact> contacts = new List<Contact>();
 
-            contacts = await  _context.Contacts.Where(c => c.AppUserId == userId).ToListAsync(); 
+            contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
+                                              .Include(c => c.Categories)
+                                              .ToListAsync();
 
             return View(contacts);
         }
@@ -112,9 +114,21 @@ namespace ContactMVP.Controllers
                     contact.BirthDate = DateTime.SpecifyKind(contact.BirthDate.Value, DateTimeKind.Utc);
                 }
 
-
                 _context.Add(contact);
                 await _context.SaveChangesAsync();
+
+                // Loop over selected categories to find the category entities in the db
+                foreach (int categoryId in selected)
+                {
+                    Category? category = await _context.Categories.FindAsync(categoryId);
+               
+                    category!.Contacts.Add(contact);
+
+
+                }
+                    // Save the changes to db
+                    await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
 
@@ -126,6 +140,15 @@ namespace ContactMVP.Controllers
         
         public async Task<IActionResult> Edit(int? id)
         {
+            // Query and present the list of categories for logged in user
+            string? userId = _userManager.GetUserId(User);
+
+            IEnumerable<Category> categoriesList = await _context.Categories
+                                                         .Where(c => c.AppUserId == userId)
+                                                         .ToListAsync();
+
+
+
             if (id == null || _context.Contacts == null)
             {
                 return NotFound();
@@ -136,6 +159,10 @@ namespace ContactMVP.Controllers
             {
                 return NotFound();
             }
+
+
+
+            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id", "Name");
             ViewData["StatesList"] = new SelectList(Enum.GetValues(typeof(States)).Cast<States>());
             return View(contact);
         }
@@ -146,7 +173,7 @@ namespace ContactMVP.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         
-        public async Task<IActionResult> Edit(int id, [Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,Phone,Created,ImageData,ImageType,ImageFile")] Contact contact)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,Phone,Created,ImageData,ImageType,ImageFile")] Contact contact, IEnumerable<int> selected)
         {
             if (id != contact.Id)
             {
@@ -157,6 +184,7 @@ namespace ContactMVP.Controllers
             {      
                 try
                 {
+
                     // Reformat Created Date
                     contact.Created = DateTime.SpecifyKind(contact.Created, DateTimeKind.Utc);  
 
@@ -172,9 +200,25 @@ namespace ContactMVP.Controllers
                     {
                         contact.BirthDate = DateTime.SpecifyKind(contact.BirthDate.Value, DateTimeKind.Utc);
                     }
-
+              
                     _context.Update(contact);
                     await _context.SaveChangesAsync();
+
+                    //TODO: 
+                    // Add use of the ContactMVPService ???
+                    //
+
+                    // Loop over selected categories to find the category entities in the db
+                    //foreach (int categoryId in selected)
+                    //{
+                    //    Category? category = await _context.Categories.FindAsync(categoryId);
+
+                    //    category!.Contacts.Add(contact);
+
+
+                    //}
+                    //// Save the changes to db
+                    //await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {

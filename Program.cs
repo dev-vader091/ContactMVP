@@ -3,6 +3,7 @@ using ContactMVP.Models;
 using ContactMVP.Services;
 using ContactMVP.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +22,9 @@ builder.Services.AddControllersWithViews();
 // Custom Services 
 // must use AddScoped to add interfaces 
 builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IEmailSender, EmailService>();
 
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 
 builder.Services.AddMvc();
 
