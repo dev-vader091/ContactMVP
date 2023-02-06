@@ -19,6 +19,9 @@ namespace ContactMVP.Services
             try
             {
                 // Get contact from database
+                // Include() is pulling in an ICollection of categories above,
+                // which is a collection of Category objects,
+                // the hash set is just there so it's never null, just empty.
                 Contact? contact = await _context.Contacts
                                                   .Include(c => c.Categories)
                                                   .FirstOrDefaultAsync(c => c.Id == contactId);
@@ -43,6 +46,7 @@ namespace ContactMVP.Services
                 throw;
             }
         }
+
 
         public Task AddContactToCategoryAsync(int categoryId, int contactId)
         {

@@ -11,6 +11,8 @@ using ContactMVP.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using ContactMVP.Services.Interfaces;
+using ContactMVP.Models.ViewModels;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 namespace ContactMVP.Controllers
 {
@@ -21,29 +23,37 @@ namespace ContactMVP.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IImageService _imageService;
         private readonly IContactMVPService _contactMVPService;
+        private readonly IEmailSender _emailService;
 
 
         public ContactsController(ApplicationDbContext context,
                                   UserManager<AppUser> userManager, 
                                   IImageService imageService,
-                                  IContactMVPService contactMVPService)
+                                  IContactMVPService contactMVPService,
+                                  IEmailSender emailService)
+
         {
             _context = context;
             _userManager = userManager;
             _imageService = imageService;
             _contactMVPService = contactMVPService;
+            _emailService = emailService;
         }
                                  
 
 
         // GET: Contacts
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? swalMessage = null)
         {
+            ViewData["SwalMessage"] = swalMessage;
+
             string userId = _userManager.GetUserId(User)!;
 
             List<Contact> contacts = new List<Contact>();
 
+            // LINQ -- "c => c..." = "c gets ...."
+            // LINQ -- Include() -- used to get info from another table
             contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
                                               .Include(c => c.Categories)
                                               .ToListAsync();
@@ -51,6 +61,71 @@ namespace ContactMVP.Controllers
             return View(contacts);
         }
 
+        
+        public async Task<IActionResult> EmailContact(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            string? appUserId = _userManager.GetUserId(User);
+            Contact? contact = await _context.Contacts
+                                             .FirstOrDefaultAsync(c => c.Id == id && c.AppUserId == appUserId);
+
+            if (contact == null)
+            {
+                return NotFound();
+            }
+
+
+            // instatiate EmailData 
+            EmailData emailData = new EmailData()
+            {
+                EmailAddress = contact!.Email,
+                FirstName = contact.FirstName,
+                LastName = contact.LastName
+            };
+
+            // instantiate the ViewModel    
+            EmailContactViewModel viewModel = new EmailContactViewModel()
+            {
+                Contact = contact,
+                EmailData = emailData
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EmailContact(EmailContactViewModel viewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                string? swalMessage = string.Empty;
+
+                try
+                {
+                    await _emailService.SendEmailAsync(viewModel.EmailData!.EmailAddress!, 
+                                                       viewModel.EmailData.EmailSubject!, 
+                                                       viewModel.EmailData.EmailBody!);
+
+                    
+                    swalMessage = "Success: Email Sent!";
+                    return RedirectToAction(nameof(Index),new {swalMessage});
+                }
+                catch (Exception)
+                {
+                    swalMessage = "Error: Email Send Failed!";
+                    return RedirectToAction(nameof(Index), new {swalMessage});
+                    throw;
+                }
+            }
+
+            return View(viewModel);
+        }
+        
         // GET: Contacts/Details/5
         
         public async Task<IActionResult> Details(int? id)

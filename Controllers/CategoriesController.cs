@@ -9,6 +9,8 @@ using ContactMVP.Data;
 using ContactMVP.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
+using ContactMVP.Services;
+using ContactMVP.Services.Interfaces;
 
 namespace ContactMVP.Controllers
 {
@@ -17,12 +19,14 @@ namespace ContactMVP.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IContactMVPService _contactMVPService;
 
 
-        public CategoriesController(ApplicationDbContext context, UserManager<AppUser> userManager)
+        public CategoriesController(ApplicationDbContext context, UserManager<AppUser> userManager, IContactMVPService contactMVPService)
         {
             _context = context;
             _userManager = userManager;
+            _contactMVPService = contactMVPService;
         }
 
         // GET: Categories
@@ -59,9 +63,23 @@ namespace ContactMVP.Controllers
         }
 
         // GET: Categories/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            // Query and present the list of contacts for logged in user
+            string userId = _userManager.GetUserId(User)!;
+
+
+            IEnumerable<Contact> contactList = await _context.Contacts
+                                                         .Where(c => c.AppUserId == userId)
+                                                         .ToListAsync();
+
+
+            ViewData["ContactList"] = new MultiSelectList(contactList, "Id", "FullName");
+
+
+
             ViewData["AppUserId"] = new SelectList(_context.Users, "Id", "Id");
+
             return View();
         }
 
@@ -78,9 +96,11 @@ namespace ContactMVP.Controllers
             {
                 category.AppUserId = _userManager.GetUserId(User);
 
-
                 _context.Add(category);
                 await _context.SaveChangesAsync();
+
+
+                
                 return RedirectToAction(nameof(Index));
             }
 

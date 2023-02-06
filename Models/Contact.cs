@@ -68,6 +68,10 @@ namespace ContactMVP.Models
 
         // Navigation Properties
         public virtual AppUser? AppUser { get; set; }
+
+        // We instantiate is as a new HashSet just so we have a (very lightweight)
+        // empty object which we can then later manipulate. I.e.
+        // that property will never be null, it just may be empty
         public virtual ICollection<Category> Categories { get; set; } = new HashSet<Category>();
 
     }
