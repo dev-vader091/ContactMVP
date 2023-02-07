@@ -43,7 +43,9 @@ namespace ContactMVP.Controllers
 
             List<Category> categories = new List<Category>();
 
-            categories = await _context.Categories.Where(c => c.AppUserId == userId).Include(c => c.AppUser).ToListAsync();
+            categories = await _context.Categories.Where(c => c.AppUserId == userId)
+                                                  .Include(c => c.Contacts)
+                                                  .ToListAsync();
 
             return View(categories);
         }
@@ -58,8 +60,7 @@ namespace ContactMVP.Controllers
             string? userId = _userManager.GetUserId(User);
             Category? category = await _context.Categories
                                                 .Include(c => c.Contacts)
-                                                .FirstOrDefaultAsync(c => c.Id == id && c.AppUserId == userId);
-
+                                                .FirstOrDefaultAsync(c => c.Id == id && c.AppUserId == userId);           
             if (category == null)
             {
                 return NotFound();

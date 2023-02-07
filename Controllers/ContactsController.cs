@@ -44,24 +44,85 @@ namespace ContactMVP.Controllers
 
         // GET: Contacts
 
-        public async Task<IActionResult> Index(string? swalMessage = null)
+        public async Task<IActionResult> Index(int? categoryId, string? swalMessage = null)
         {
             ViewData["SwalMessage"] = swalMessage;
 
+            // Get the AppUser
             string userId = _userManager.GetUserId(User)!;
 
+            // Instantiate a List of Contacts
             List<Contact> contacts = new List<Contact>();
 
             // LINQ -- "c => c..." = "c gets ...."
             // LINQ -- Include() -- used to get info from another table
-            contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
-                                              .Include(c => c.Categories)
-                                              .ToListAsync();
+            //contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
+            //                                  .Include(c => c.Categories)
+            //                                  .ToListAsync();
+
+
+            // Get the Categories from the AppUser based on whether they have a chosen Category to "filter" by
+            List<Category> categories = await _context.Categories
+                                                      .Where(c => c.AppUserId == userId)
+                                                      .ToListAsync();
+
+            if (categoryId == null)
+            {
+                contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
+                                                  .Include(c => c.Categories)
+                                                  .ToListAsync();
+            }
+            else
+            {
+                contacts = (await _context.Categories
+                                         .Include(c => c.Contacts)
+                                         .FirstOrDefaultAsync(c => c.AppUserId == userId && c.Id == categoryId))!
+                                         .Contacts.ToList();
+            }
+            
+
+
+            ViewData["CategoryId"] = new SelectList(categories, "Id", "Name", categoryId);
 
             return View(contacts);
         }
 
-        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SearchContacts(string? searchString)
+        {
+            // Get the AppUser
+            string userId = _userManager.GetUserId(User)!;
+
+            // Get the contacts from the AppUser
+            List<Contact> contacts = new List<Contact>();
+
+            AppUser? appUser = await _context.Users
+                                             .Include(u => u.Contacts)
+                                             .ThenInclude(u => u.Categories)
+                                             .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (string.IsNullOrEmpty(searchString))
+            {
+                contacts = appUser!.Contacts
+                                   .OrderBy(c => c.LastName)
+                                   .ThenBy(c => c.FirstName)
+                                   .ToList();
+            }
+            else
+            {
+                contacts = appUser!.Contacts
+                                   .Where(c => c.FullName!.ToLower().Contains(searchString.ToLower()))
+                                   .OrderBy(c => c.LastName)
+                                   .ThenBy(c => c.FirstName)
+                                   .ToList(); 
+            }
+
+            ViewData["CategoryId"] = new SelectList(appUser.Categories, "Id", "Name");
+
+            return View(nameof(Index), contacts);
+        }
+
         public async Task<IActionResult> EmailContact(int? id)
         {
             if (id == null)
@@ -158,7 +219,7 @@ namespace ContactMVP.Controllers
                                                          .ToListAsync();
 
 
-            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id", "Name");
+            ViewData["CategoryList"] = new MultiSelectList(categoriesList, "Id","Name");
 
 
 
