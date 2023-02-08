@@ -67,6 +67,7 @@ namespace ContactMVP.Controllers
                                                       .ToListAsync();
 
             if (categoryId == null)
+                // categoryId is null when first get request is made
             {
                 contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
                                                   .Include(c => c.Categories)
