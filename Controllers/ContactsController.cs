@@ -51,15 +51,12 @@ namespace ContactMVP.Controllers
             // Get the AppUser
             string userId = _userManager.GetUserId(User)!;
 
+            //AppUser? user = await _userManager.GetUserAsync(User);
+
             // Instantiate a List of Contacts
             List<Contact> contacts = new List<Contact>();
 
-            // LINQ -- "c => c..." = "c gets ...."
-            // LINQ -- Include() -- used to get info from another table
-            //contacts = await _context.Contacts.Where(c => c.AppUserId == userId)
-            //                                  .Include(c => c.Categories)
-            //                                  .ToListAsync();
-
+           
 
             // Get the Categories from the AppUser based on whether they have a chosen Category to "filter" by
             List<Category> categories = await _context.Categories
@@ -141,7 +138,7 @@ namespace ContactMVP.Controllers
             }
 
 
-            // instatiate EmailData 
+            // instantiate EmailData 
             EmailData emailData = new EmailData()
             {
                 EmailAddress = contact!.Email,

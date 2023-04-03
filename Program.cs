@@ -33,6 +33,8 @@ builder.Services.AddMvc();
 
 var app = builder.Build();
 
+
+
 var scope = app.Services.CreateScope();
 
 await DataUtility.ManageDataAsync(scope.ServiceProvider);
